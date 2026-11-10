@@ -1,0 +1,7 @@
+{
+  "name": "SG Weather & Outdoor Advisor",
+  "description": "Real-time Singapore meteorological forecasts, heat stress index, rain and lightning alerts, and smart outdoor activity advisories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
