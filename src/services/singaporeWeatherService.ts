@@ -123,23 +123,27 @@ export async function fetchSingaporeWeather(): Promise<ComprehensiveWeatherData>
 
   try {
     const [nowcastRes, psiRes, uvRes, forecast24Res, forecast4DayRes, airTempRes, humidityRes] = await Promise.allSettled([
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/2-hour-weather-forecast'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/psi'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/uv-index'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/24-hour-weather-forecast'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/4-day-weather-forecast'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/air-temperature'),
-      fetchWithTimeout('https://api.data.gov.sg/v1/environment/relative-humidity'),
+      fetchWithTimeout('/api/two-hr-forecast').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast')),
+      fetchWithTimeout('/api/psiavailability').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/psi')),
+      fetchWithTimeout('/api/uv').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/uv')),
+      fetchWithTimeout('/api/twenty-four-hr-forecast').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/twenty-four-hr-forecast')),
+      fetchWithTimeout('/api/four-day-outlook').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/four-day-outlook')),
+      fetchWithTimeout('/api/air-temperature').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/air-temperature')),
+      fetchWithTimeout('/api/relative-humidity').catch(() => fetchWithTimeout('https://api-open.data.gov.sg/v2/real-time/api/relative-humidity')),
     ]);
 
     let parsedNowcasts: LocationNowcast[] = [];
-    if (nowcastRes.status === 'fulfilled' && nowcastRes.value?.items?.[0]?.forecasts) {
-      const forecasts = nowcastRes.value.items[0].forecasts;
-      const metadata = nowcastRes.value.area_metadata || [];
+    const nowcastData = nowcastRes.status === 'fulfilled' ? (nowcastRes.value?.data?.data || nowcastRes.value?.data || nowcastRes.value) : null;
+    const forecasts = nowcastData?.items?.[0]?.forecasts || nowcastData?.forecasts;
+
+    if (forecasts && Array.isArray(forecasts)) {
+      const metadata = nowcastData.area_metadata || [];
       const coordMap = new Map<string, { lat: number; lng: number }>();
-      metadata.forEach((m: { name: string; label_location: { latitude: number; longitude: number } }) => {
-        coordMap.set(m.name, { lat: m.label_location.latitude, lng: m.label_location.longitude });
+      metadata.forEach((m: { name: string; label_location?: { latitude: number; longitude: number }; labelLocation?: { latitude: number; longitude: number } }) => {
+        const loc = m.label_location || m.labelLocation;
+        if (loc) coordMap.set(m.name, { lat: loc.latitude, lng: loc.longitude });
       });
+
 
       parsedNowcasts = forecasts.map((f: { area: string; forecast: string }) => {
         const coords = coordMap.get(f.area) || { lat: 1.35, lng: 103.82 };
